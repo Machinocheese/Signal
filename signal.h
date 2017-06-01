@@ -35,7 +35,7 @@ int binToHex(vector<int> hex){
 	return sum;
 }
 
-int tillNextZero(vector<uint8_t> hex, const int& position){
+int tillNextZero(const vector<uint8_t>& hex, const int& position){
 	int num = 0;
 	while(hex[position + num] != 0x0){
 		num++;
@@ -43,21 +43,40 @@ int tillNextZero(vector<uint8_t> hex, const int& position){
 	return num;
 }
 
-void print(vector<int> vec){
+void print(const vector<int>& vec){
 	for(int i = 0; i < vec.size(); i++){
 		cout << vec[i];
 	}
 	cout << endl;
 }
 
-vector<int> getCodeStream(vector<uint8_t> input, int offset, int size){
+vector<int> extract(vector<int>& input, const int& codeSize){
+	vector<int> intermed;
+	if(codeSize > input.size()){
+		/*for(int i = 0; i < codeSize - input.size(); i++){
+			intermed.push_back(0);
+		}*/
+		//print(input);
+		intermed = input;
+		reverse(intermed.begin(), intermed.end());
+		input.clear();
+	}
+	else{
+		intermed = vector<int>(input.begin(), input.begin() + codeSize);
+		reverse(intermed.begin(), intermed.end());
+		input.erase(input.begin(), input.begin() + codeSize);
+	}
+	return intermed;
+}
+
+vector<int> getCodeStream(const vector<uint8_t>& input, int offset, const int& size){
 	int codeSize = input[offset] + 1; //minimum size for gifs
-	int clearCode, endCode, codeOffset = 0, counter, skippable, temp;
+	int clearCode, endCode, codeOffset = 0, counter = 0, skippable, temp;
 	stringstream ss;
-	//cout << codeSize << endl;
 
 	vector<string> codeTable;
 	vector<int> codeStream;
+	vector<int> indexStream;
 	vector<int> intermed;
 	vector<int> binaryInput;
 	for(int i = 0; i < size; i++){
@@ -70,12 +89,17 @@ vector<int> getCodeStream(vector<uint8_t> input, int offset, int size){
 	codeTable.push_back("4");
 	codeTable.push_back("5");
 
-	//this consumes a lot of memory, but makes the code easier to write/read
+	//sets up the data in binary form
 	offset += 1;
-	skippable = input[offset] - 1;
+	skippable = input[offset];
 	offset += 1;
 	for(int i = offset; i < offset + skippable; i++){
 		intermed = hexToBin(input[i]);
+		if(i == offset + skippable - 1){
+			reverse(intermed.begin(), intermed.end());
+			binaryInput.insert(binaryInput.end(), intermed.begin(), intermed.end());
+			break;
+		}
 		for(int i = 0; i < 8; i++){
 			if(intermed.empty()) binaryInput.push_back(0);
 			else{
@@ -85,19 +109,42 @@ vector<int> getCodeStream(vector<uint8_t> input, int offset, int size){
 		}
 	}
 
-	intermed.clear();
-
+	int pW, cW;
+	string p = "", c = "", result;
+	cW = binToHex(extract(binaryInput, codeSize));
+	codeStream.push_back(cW);
+	//if(cW != 4) inputStream.push_back(codeTable[cW]); //this line shouldn't run
+	cW = binToHex(extract(binaryInput, codeSize)); //this should be the first legit output
+	codeStream.push_back(cW);
+	//indexStream.push_back(codeTable[cW]);
+	
 	while(!binaryInput.empty()){
-		counter = 0;
-		intermed = vector<int>(binaryInput.begin(), binaryInput.begin() + codeSize);
-		reverse(intermed.begin(), intermed.end());
-		temp = binToHex(intermed);
-		binaryInput.erase(binaryInput.begin(), binaryInput.begin() + codeSize);
-		codeStream.push_back(temp);
-		for(int i = 0; i < codeTable.size(); i++){
-			
+		pW = cW;
+		cW = binToHex(extract(binaryInput, codeSize));
+		if(cW == 0x5){
+			codeStream.push_back(cW);
+			break;
 		}
-		//don't know what code is, so just fill in with # and position
+		if(codeTable.size() == (exp(codeSize) - 1)) codeSize++;
+		if(cW > codeTable.size() - 1){ //aka cW isn't in the dictionary
+			ss << codeTable[pW];
+			p = ss.str();
+			c = ss.str()[0];
+			codeStream.push_back(codeTable.size());
+			codeTable.push_back(p+c);
+			ss.str("");
+			//inputStream.push_back(atoi(p+c));
+		} else {
+			codeStream.push_back(cW);
+			//indexStream.push_back(codeTable[cW]);
+			ss << codeTable[pW];
+			p = ss.str();
+			ss.str("");
+			ss << codeTable[cW];
+			c = ss.str()[0];
+			ss.str("");
+			codeTable.push_back(p + c);
+		}
 	}
 	
 ////////////////////////////////////////////////loop based on hex number, calc all at once from one hex # in one loop
@@ -113,7 +160,7 @@ vector<int> getCodeStream(vector<uint8_t> input, int offset, int size){
 	return codeStream;
 }
 
-vector<string> getColorTable(vector<uint8_t> input){
+vector<string> getColorTable(const vector<uint8_t>& input){
 	vector<int> packed;
 	vector<string> colorTable;
 	stringstream ss;
@@ -157,7 +204,7 @@ vector<string> getColorTable(vector<uint8_t> input){
 	return colorTable;
 }
 
-int calculateOffset(vector<uint8_t> input){
+int calculateOffset(const vector<uint8_t>& input){
 
 	vector<int> packed;
 	int totalOffset = 13; //header + logical screen descriptor = 13 bytes
