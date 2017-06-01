@@ -45,7 +45,7 @@ int tillNextZero(const vector<uint8_t>& hex, const int& position){
 
 void print(const vector<int>& vec){
 	for(int i = 0; i < vec.size(); i++){
-		cout << vec[i];
+		cout << vec[i] << ' ';
 	}
 	cout << endl;
 }
@@ -69,59 +69,138 @@ vector<int> extract(vector<int>& input, const int& codeSize){
 	return intermed;
 }
 
-vector<int> getCodeStream(const vector<uint8_t>& input, int offset, const int& size){
-	int codeSize = input[offset] + 1; //minimum size for gifs
-	int clearCode, endCode, codeOffset = 0, counter = 0, skippable, temp;
-	stringstream ss;
-
-	vector<string> codeTable;
-	vector<int> codeStream;
-	vector<int> indexStream;
+vector<int> initializeBinary(const vector<uint8_t>& input, int offset){
 	vector<int> intermed;
 	vector<int> binaryInput;
-	for(int i = 0; i < size; i++){
+	int skippable;
+
+	offset += 1;
+	while(input[offset] != 0){
+		skippable = input[offset];
+		offset += 1;
+		for(int i = offset; i < offset + skippable; i++){
+			intermed = hexToBin(input[i]);
+			if(i == offset + skippable - 1){
+				reverse(intermed.begin(), intermed.end());
+				binaryInput.insert(binaryInput.end(), intermed.begin(), intermed.end());
+				break;
+			}
+			for(int i = 0; i < 8; i++){
+				if(intermed.empty()) binaryInput.push_back(0);
+				else{
+					binaryInput.push_back(intermed.back());
+					intermed.pop_back();
+				}
+			}
+		}
+		offset += skippable;
+	}
+/*
+	for(int i = 0; i < binaryInput.size(); i++){
+		cout << binaryInput[i] << ' ';
+	}
+*/
+	return binaryInput;
+}
+
+vector<string> initializeCodeTable(const int& tableSize, const int& codeSize, int &clearCode, int &endCode){
+	stringstream ss;
+	vector<string> codeTable;
+	for(int i = 0; i < tableSize; i++){
 		ss << i;
 		codeTable.push_back(ss.str());
 		ss.str("");
 	}
-	clearCode = codeTable.size();
-	endCode = codeTable.size() + 1;
-	codeTable.push_back("4");
-	codeTable.push_back("5");
+	int trueSize = exp(codeSize - 1);
+	for(int i = codeTable.size(); i < trueSize; i++){
+		codeTable.push_back("emptyspace");
+	}
+	clearCode = trueSize;
+	endCode = trueSize + 1;
+	ss << trueSize;
+	codeTable.push_back(ss.str());
+	ss.str("");
+	ss << trueSize + 1;
+	codeTable.push_back(ss.str());
+	ss.str("");
+	return codeTable;
+}
 
-	//sets up the data in binary form
-	offset += 1;
-	skippable = input[offset];
-	offset += 1;
-	for(int i = offset; i < offset + skippable; i++){
-		intermed = hexToBin(input[i]);
-		if(i == offset + skippable - 1){
-			reverse(intermed.begin(), intermed.end());
-			binaryInput.insert(binaryInput.end(), intermed.begin(), intermed.end());
-			break;
-		}
-		for(int i = 0; i < 8; i++){
-			if(intermed.empty()) binaryInput.push_back(0);
-			else{
-				binaryInput.push_back(intermed.back());
-				intermed.pop_back();
+void organizeData(const vector<string>& indexStream, const vector<uint8_t>& input){
+	stringstream ss;
+	int a = input[7];
+	int b = input[6];
+		
+	if(a < 0x10) ss << 0;
+	ss << hex << a;
+	if(b < 0x10) ss << 0;
+	ss << hex << b;
+	int width = (int)strtol(ss.str().c_str(), NULL, 16);
+	ss.str("");
+
+	a = input[9];
+	b = input[8];
+	if(a < 0x10) ss << 0;
+	ss << hex << a;
+	if(b < 0x10) ss << 0;
+	ss << hex << b;
+	int height = (int)strtol(ss.str().c_str(), NULL, 16);
+	ss.str("");
+
+
+	char organizedStream[width][height];
+	int currentX = 0, currentY = 0;
+	
+	for(int i = 0; i < indexStream.size(); i++){
+		for(int j = 0; j < indexStream[i].size(); j++){
+			organizedStream[currentX][currentY] = indexStream[i][j];
+			currentX++;
+			if(currentX == width){
+				currentY++;
+				currentX = 0;
 			}
 		}
 	}
+	
+	for(int i = 0; i < height; i++){
+		for(int j = 0; j < width; j++){
+			cout << organizedStream[j][i] << ' ';
+		}
+		cout << endl;
+	}
+
+}
+
+vector<int> getImageData(const vector<uint8_t>& input, int offset, const int& size){
+	int codeSize = input[offset] + 1; //minimum size for gifs
+	int clearCode, endCode;
+	stringstream ss;
+	int counter = 0;
+
+	vector<string> codeTable;
+	vector<string> indexStream;
+	vector<int> codeStream;
+	vector<int> binaryInput;
+
+	//initializes code table with color table values
+	codeTable = initializeCodeTable(size, codeSize, clearCode, endCode);
+
+	//sets up the data in binary form
+	binaryInput = initializeBinary(input, offset);
 
 	int pW, cW;
-	string p = "", c = "", result;
+	string p = "", c = "";
 	cW = binToHex(extract(binaryInput, codeSize));
 	codeStream.push_back(cW);
-	//if(cW != 4) inputStream.push_back(codeTable[cW]); //this line shouldn't run
+	if(cW != clearCode) indexStream.push_back(codeTable[cW]); //this line shouldn't run
 	cW = binToHex(extract(binaryInput, codeSize)); //this should be the first legit output
 	codeStream.push_back(cW);
-	//indexStream.push_back(codeTable[cW]);
+	indexStream.push_back(codeTable[cW]);
 	
 	while(!binaryInput.empty()){
 		pW = cW;
 		cW = binToHex(extract(binaryInput, codeSize));
-		if(cW == 0x5){
+		if(cW == endCode){
 			codeStream.push_back(cW);
 			break;
 		}
@@ -133,10 +212,10 @@ vector<int> getCodeStream(const vector<uint8_t>& input, int offset, const int& s
 			codeStream.push_back(codeTable.size());
 			codeTable.push_back(p+c);
 			ss.str("");
-			//inputStream.push_back(atoi(p+c));
+			indexStream.push_back(p+c);
 		} else {
 			codeStream.push_back(cW);
-			//indexStream.push_back(codeTable[cW]);
+			indexStream.push_back(codeTable[cW]);
 			ss << codeTable[pW];
 			p = ss.str();
 			ss.str("");
@@ -147,8 +226,7 @@ vector<int> getCodeStream(const vector<uint8_t>& input, int offset, const int& s
 		}
 	}
 	
-////////////////////////////////////////////////loop based on hex number, calc all at once from one hex # in one loop
-
+	/*
 	codeTable[clearCode] = "clear code";
 	codeTable[endCode] = "end of information code";
 	cout << "\nCode Table: \n------------------------\n";
@@ -157,10 +235,17 @@ vector<int> getCodeStream(const vector<uint8_t>& input, int offset, const int& s
 		cout << codeTable[i] << endl;
 	}
 	print(codeStream);
+	for(int i = 0; i < indexStream.size(); i++){
+		cout << indexStream[i] << ' ';
+	}
+	cout << endl;*/
+
+	organizeData(indexStream, input);
 	return codeStream;
 }
 
 vector<string> getColorTable(const vector<uint8_t>& input){
+	//account for local color tables
 	vector<int> packed;
 	vector<string> colorTable;
 	stringstream ss;
@@ -195,7 +280,8 @@ vector<string> getColorTable(const vector<uint8_t>& input){
 			counter = 1;
 		ss.str("");
 	}
-/*	make debugging easier
+	/*
+	//make debugging easier
 	for(int i = 0; i < colorTable.size(); i++){
 		cout << colorTable[i] << endl;
 	}
@@ -238,7 +324,7 @@ int calculateOffset(const vector<uint8_t>& input){
 
 	//skip over Image Descriptor
 	totalOffset += 10;
-	cout << totalOffset << endl;
+	//cout << totalOffset << endl;
 	return totalOffset;
 }
 #endif
