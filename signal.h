@@ -53,10 +53,6 @@ void print(const vector<int>& vec){
 vector<int> extract(vector<int>& input, const int& codeSize){
 	vector<int> intermed;
 	if(codeSize > input.size()){
-		/*for(int i = 0; i < codeSize - input.size(); i++){
-			intermed.push_back(0);
-		}*/
-		//print(input);
 		intermed = input;
 		reverse(intermed.begin(), intermed.end());
 		input.clear();
@@ -75,6 +71,7 @@ vector<int> initializeBinary(const vector<uint8_t>& input, int offset){
 	int skippable;
 
 	offset += 1;
+	int counter = 0;
 	while(input[offset] != 0){
 		skippable = input[offset];
 		offset += 1;
@@ -161,14 +158,17 @@ void organizeData(const vector<string>& indexStream, const vector<uint8_t>& inpu
 			}
 		}
 	}
+
+	ofstream myfile;
+	myfile.open("data.txt");
 	
 	for(int i = 0; i < height; i++){
 		for(int j = 0; j < width; j++){
-			cout << organizedStream[j][i] << ' ';
+			myfile << organizedStream[j][i] << ' ';
 		}
-		cout << endl;
+		myfile << endl;
 	}
-
+	myfile.close();
 }
 
 vector<int> getImageData(const vector<uint8_t>& input, int offset, const int& size){
@@ -178,12 +178,14 @@ vector<int> getImageData(const vector<uint8_t>& input, int offset, const int& si
 	int counter = 0;
 
 	vector<string> codeTable;
+	vector<string> originalCodeTable;
 	vector<string> indexStream;
 	vector<int> codeStream;
 	vector<int> binaryInput;
 
 	//initializes code table with color table values
 	codeTable = initializeCodeTable(size, codeSize, clearCode, endCode);
+	originalCodeTable = codeTable;
 
 	//sets up the data in binary form
 	binaryInput = initializeBinary(input, offset);
@@ -196,37 +198,55 @@ vector<int> getImageData(const vector<uint8_t>& input, int offset, const int& si
 	cW = binToHex(extract(binaryInput, codeSize)); //this should be the first legit output
 	codeStream.push_back(cW);
 	indexStream.push_back(codeTable[cW]);
-	
+
 	while(!binaryInput.empty()){
 		pW = cW;
 		cW = binToHex(extract(binaryInput, codeSize));
+
 		if(cW == endCode){
 			codeStream.push_back(cW);
-			break;
+			continue;
 		}
-		if(codeTable.size() == (exp(codeSize) - 1)) codeSize++;
+		if(cW == clearCode){
+			cout << "ACTIVATED" << endl << endl;
+			codeTable = originalCodeTable;
+			codeSize = input[offset] + 1;
+		}
+		if(codeTable.size() == (exp(codeSize) - 1)){
+			codeSize++; // <- i think this is the problem
+		} 
 		if(cW > codeTable.size() - 1){ //aka cW isn't in the dictionary
-			ss << codeTable[pW];
-			p = ss.str();
-			c = ss.str()[0];
+			if(pW >= codeTable.size()) {
+				c = p[0];
+			} else {
+				ss << codeTable[pW];
+				p = ss.str();
+				c = ss.str()[0];
+			}
 			codeStream.push_back(codeTable.size());
 			codeTable.push_back(p+c);
 			ss.str("");
 			indexStream.push_back(p+c);
+			p += c;
 		} else {
 			codeStream.push_back(cW);
 			indexStream.push_back(codeTable[cW]);
-			ss << codeTable[pW];
-			p = ss.str();
-			ss.str("");
+			if(pW >= codeTable.size()){
+				//do nothing to p
+			} else {
+				ss << codeTable[pW];
+				p = ss.str();
+				ss.str("");
+			}
 			ss << codeTable[cW];
 			c = ss.str()[0];
 			ss.str("");
 			codeTable.push_back(p + c);
+			p += c;
 		}
 	}
 	
-	/*
+	
 	codeTable[clearCode] = "clear code";
 	codeTable[endCode] = "end of information code";
 	cout << "\nCode Table: \n------------------------\n";
@@ -234,7 +254,7 @@ vector<int> getImageData(const vector<uint8_t>& input, int offset, const int& si
 		printf("Position: %2d | ", i);
 		cout << codeTable[i] << endl;
 	}
-	print(codeStream);
+	/*print(codeStream);
 	for(int i = 0; i < indexStream.size(); i++){
 		cout << indexStream[i] << ' ';
 	}
