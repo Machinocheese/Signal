@@ -5,8 +5,8 @@
 using namespace std;
 
 int main(int argc, char* argv[]){
-	//std::ifstream in (argv[1],std::ios::binary);
-	std::ifstream in ("seismogram.gif",std::ios::binary);
+	std::ifstream in (argv[1],std::ios::binary);
+	//std::ifstream in ("sample.gif",std::ios::binary);
 	uint8_t a;
 	vector<uint8_t> input;
 	std::noskipws(in);
