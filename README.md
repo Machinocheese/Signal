@@ -1,9 +1,7 @@
 # Signal
 
-Overall Plan:
+So this is a program that takes in a .GIF file and spits it back out in its input stream form. It spits out its output into a file called data.txt, which should be provided in the folder where the program is run.
 
-Step 1. Create a system for analyzing image data. If I've spent enough time to get something semi-working, I should just go look for an alternative online.
+There are some problems with this program (mainly that it begins to spout out sketchy output once there are multiple image sub-blocks). This means that there are no problems with working with smaller images, but the larger the image gets, the higher the chance is that there will be a messup.
 
-Step 2. Analyze the data under the assumption that it's a wave signal.
-
-Step 3. Perform the necessary computations to the signal...
+I know the problem lies with the getImageData method, and most likely it's with the while loop within it and how I handle codeSize and reinitializing the codeTable.
