@@ -6,5 +6,5 @@ There are some problems with this program (mainly that it begins to spout out sk
 
 I know the problem lies with the getImageData method, and most likely it's with the while loop within it and how I handle codeSize and reinitializing the codeTable.
 
-This was made with the assistance of the URL below:
+This was made with the assistance of giflib:
 http://giflib.sourceforge.net/whatsinagif/bits_and_bytes.html
